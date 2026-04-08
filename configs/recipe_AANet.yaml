@@ -1,0 +1,93 @@
+task_name: resnet34_AANet_pa=3_stage1_atleast20
+data_root: data_table_with_fundus_cleaned.xlsx
+image_root: fundus_data
+save_root: save_result_fundus
+
+device: cuda
+seed: 2026
+deterministic: true
+
+kfold:
+  k_folds: 5
+  seed: 2026
+
+dataset_ratio: [0.8, 0.1, 0.1]
+batch_size: 8
+num_workers: 3
+
+archetype:
+  k: 10
+  method: pgd
+  init: aa_plus_plus
+  n_init: 200
+  max_iter: 300
+  tol: 0.0001
+  random_state: 2026
+  method_params: null
+
+model:
+  type: resnet_proto
+  depth: resnet34
+  vf_dim: 52
+  num_prototypes: 10
+  prototype_model_path: null
+  proj_use_layernorm: true
+
+losses:
+  vf:
+    type: mse
+  md:
+    type: mse
+  a:
+    type: mse
+
+optimizer:
+  type: adam
+  weight_decay: 0.0001
+
+scheduler:
+  type: reduce_on_plateau
+  mode: min
+  factor: 0.5
+  patience: 4
+
+training:
+  epochs: 120
+  checkpoint_interval: 10
+  use_test: true
+
+  lr:
+    stage1: 0.0001
+    stage2_md: 0.0001
+    stage3: 0.00005
+    stage3_proj: 0.00005
+
+  loss_weights:
+    lambda_a: 1.0
+    lambda_vf1: 0.2
+    beta_r: 0.005
+    alpha_md: 0.3
+
+  stage_switch:
+    stage1:
+      min_epochs: 20
+      ema_alpha: 0.3
+      min_delta: 0.002
+      patience: 8
+    stage2:
+      min_epochs: 10
+      ema_alpha: 0.3
+      min_delta: 0.002
+      patience: 8
+
+  early_stop:
+    enabled: true
+    min_stage3_epochs: 30
+    patience: 12
+    min_delta_vf: 0.001
+    min_delta_md: 0.001
+
+test:
+  path_for_eval: save_result_fundus/resnet34_AANet_pa=3_stage1_atleast20
+  path_kfold_for_eval: save_result_fundus/resnet34_AANet_two_stage_2stage_5-fold-cv
+  eval_model: best_stage2_md_model.pth

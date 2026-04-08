@@ -1,0 +1,89 @@
+task_name: resnet34_NMFNet_pa=3
+data_root: data_table_with_fundus_cleaned.xlsx
+image_root: fundus_data
+save_root: save_result_fundus
+
+device: cuda
+seed: 2026
+deterministic: true
+
+kfold:
+  k_folds: 5
+  seed: 2026
+
+dataset_ratio: [0.8, 0.1, 0.1]
+batch_size: 8
+num_workers: 4
+
+nmf:
+  n_components: 10
+  init: nndsvda
+  solver: cd
+  beta_loss: frobenius
+  max_iter: 500
+  tol: 0.0001
+  alpha_w: 0.0
+  alpha_h: 0.0
+  l1_ratio: 0.0
+  shuffle: false
+  random_state: 2026
+  non_negative: clip
+
+model:
+  type: resnet_NMF
+  depth: resnet34
+  vf_dim: 52
+  num_components: 10
+  nmf_model_path: null
+  proj_use_layernorm: true
+  w_activation: softplus
+
+losses:
+  vf:
+    type: mse
+  w:
+    type: mse
+  md:
+    type: mse
+
+optimizer:
+  type: adam
+  weight_decay: 0.0001
+
+scheduler:
+  type: reduce_on_plateau
+  mode: min
+  factor: 0.5
+  patience: 3
+
+training:
+  epochs: 120
+  checkpoint_interval: 10
+  use_test: true
+
+  loss_weights:
+    lambda_w: 100
+
+  lr:
+    stage1: 0.0001
+    stage2_md: 0.0001
+    stage3_proj: 0.00005
+
+  stage_switch:
+    stage1:
+      min_epochs: 10
+      ema_alpha: 0.3
+      min_delta: 0.002
+      patience: 8
+
+  early_stop:
+    enabled: true
+    min_stage3_epochs: 30
+    patience: 12
+    min_delta_vf: 0.001
+    min_delta_md: 0.001
+
+test:
+  path_for_eval: save_result_fundus/resnet34_NMFNet_pa=3
+  path_kfold_for_eval: save_result_fundus/resnet34_NMFNet_pa=3_5-fold-cv
+  eval_model: best_stage2_md_model.pth
